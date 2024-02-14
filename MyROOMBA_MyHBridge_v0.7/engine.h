@@ -66,9 +66,17 @@ void drive(byte LV, byte RH )
         if (spdL < 0) spdL = 0;
         spdR = spdR - sterR;
         if (spdR < 0) spdR = 0;
-        
-        pwm.setPWM(LfPin, 0, spdL );
-        pwm.setPWM(RfPin, 0, spdR );
+
+        if (LisBlck==false && RisBlck==false)
+        {
+          pwm.setPWM(LfPin, 0, spdL );
+          pwm.setPWM(RfPin, 0, spdR );
+        }
+        else
+        {
+          pwm.setPWM(LfPin, 0, 0 );
+          pwm.setPWM(RfPin, 0, 0 );
+        }
 
       }
       else if (LV < lAnaMin) // <50% -> REVERSE
@@ -80,11 +88,21 @@ void drive(byte LV, byte RH )
         //spdR = map(LV, lAnaMin-1, 0, MINSPEED, MAXSPEED);
         spdL = GEARS[cGEAR];
         spdR = GEARS[cGEAR];
-        
-        spdL = spdL - sterL;    // skret L/P
-        if (spdL < 0) spdL = 0;
-        spdR = spdR - sterR;
-        if (spdR < 0) spdR = 0;
+
+        if (revInvert==false)
+        {
+          spdL = spdL - sterL;    // skret L/P - normalnie
+          if (spdL < 0) spdL = 0;
+          spdR = spdR - sterR;
+          if (spdR < 0) spdR = 0;
+        }
+        else
+        {
+          spdL = spdL - sterR;    // skret L/P - normalnie
+          if (spdL < 0) spdL = 0;
+          spdR = spdR - sterL;
+          if (spdR < 0) spdR = 0;
+        }
         
         pwm.setPWM(LbPin, 0, spdL);
         pwm.setPWM(RbPin, 0, spdR);

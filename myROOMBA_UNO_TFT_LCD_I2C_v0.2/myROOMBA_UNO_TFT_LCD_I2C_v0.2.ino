@@ -90,6 +90,8 @@ int bPc, bPc_p;
 bool ONCE = true;
 bool BatIncomFLAG = false;
 
+bool Rblck{0}, Rblck_p{0}, Lblck{0}, Lblck_p{0}, RevInv{0}, RevInv_p{0};
+
 void receiveEvent() {
   BatIncomFLAG = true;
   iter=0;
@@ -112,6 +114,7 @@ void requestEvent() {
   // Print to Serial Monitor
   //Serial.println("Request event");
 }
+
 
 /*-- GUI ELEMENTS ------*/
 valBarDisp lightBar;
@@ -148,6 +151,7 @@ void loop() {
 
   if (LCD_DATA_p[0] != LCD_DATA[0] || ONCE==true) // SIDEBRUSH
   {
+    /*
     tft.setTextColor(BLACK); tft.setTextSize(1);
     tft.setCursor(LEFF, 40);
     mess = "SBR: "+String(LCD_DATA_p[0]);
@@ -156,6 +160,7 @@ void loop() {
     tft.setCursor(LEFF, 40);
     mess = "SBR: "+String(LCD_DATA[0]);
     tft.print(mess);
+    */
     // BAR
     SBRUSH_BAR.draw(LCD_DATA[0], 0, 255, 30, 120, 20, 80);
     
@@ -163,29 +168,12 @@ void loop() {
   }
   if (LCD_DATA_p[1] != LCD_DATA[1] || ONCE==true) // BRUSH
   {
-    tft.setTextColor(BLACK); tft.setTextSize(1);
-    tft.setCursor(LEFF, 60);
-    mess = "BRH: "+String(LCD_DATA_p[1]);
-    tft.print(mess);
-    tft.setTextColor(YELLOW); tft.setTextSize(1);
-    tft.setCursor(LEFF, 60);
-    mess = "BRH: "+String(LCD_DATA[1]);
-    tft.print(mess);
     // BAR
     BRUSH_BAR.draw(LCD_DATA[1], 0, 255, 70, 120, 20, 80);
-    
     LCD_DATA_p[1] = LCD_DATA[1];
   }
   if (LCD_DATA_p[2] != LCD_DATA[2] || ONCE==true) // BLOWER
   {
-    tft.setTextColor(BLACK); tft.setTextSize(1);
-    tft.setCursor(LEFF, 80);
-    mess = "BLO: "+String(LCD_DATA_p[2]);
-    tft.print(mess);
-    tft.setTextColor(YELLOW); tft.setTextSize(1);
-    tft.setCursor(LEFF, 80);
-    mess = "BLO: "+String(LCD_DATA[2]);
-    tft.print(mess);
     BLOWER_BAR.draw(LCD_DATA[2], 0, 255, 110, 120, 20, 80);
     LCD_DATA_p[2] = LCD_DATA[2];
   }
@@ -289,6 +277,27 @@ void loop() {
     LCD_DATA_p[6] = LCD_DATA[6];
   }
 
+  if (LCD_DATA_p[7] != LCD_DATA[7]) // l/r blocking - invert reverse directions
+  {
+    Rblck = LCD_DATA[7] & 0x1;
+    Lblck = (LCD_DATA[7] & 0x2)>>1;
+    RevInv = (LCD_DATA[7] & 0x4)>>2;
+    if (Rblck==true)
+    { tft.setTextColor(TFT_RED); tft.setTextSize(2); tft.setCursor(270, 10); tft.print("BLC!"); }
+    else 
+    { tft.setTextColor(TFT_BLACK); tft.setTextSize(2); tft.setCursor(270, 10); tft.print("BLC!"); }
+    if (Lblck==true)
+    { tft.setTextColor(TFT_RED); tft.setTextSize(2); tft.setCursor(10, 10); tft.print("BLC!"); }
+    else 
+    { tft.setTextColor(TFT_BLACK); tft.setTextSize(2); tft.setCursor(10, 10); tft.print("BLC!"); }
+
+    if (RevInv==true)
+    { tft.setTextColor(TFT_RED); tft.setTextSize(2); tft.setCursor(65, 70); tft.print("Rev-Invrt"); }
+    else 
+    { tft.setTextColor(TFT_BLACK); tft.setTextSize(2); tft.setCursor(65, 70); tft.print("Rev-Invrt!"); }
+    LCD_DATA_p[7] = LCD_DATA[7];
+  }
+  
   if (ONCE)
   {
     showImage565(30, 210, 20, 20, SBRSHimg20x20);

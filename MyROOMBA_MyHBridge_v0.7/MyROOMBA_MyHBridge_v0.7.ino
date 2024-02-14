@@ -16,7 +16,7 @@ const byte address[6] = "00008";
 #include <Adafruit_PWMServoDriver.h>
 #include <Wire.h>
 Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
-#define SERVO_FREQ 120
+#define SERVO_FREQ 90
 
 bool DEBUG = 0;
 byte radioVals[8];
@@ -30,8 +30,8 @@ byte potL, potR, potL_p, potR_p;
 int SterL = 0, SterR = 0;
 int SterFOR = 0, SterREV = 0;
 
-//[i]     0        1      2       3         4         5         6     7   //8     9  
-//    SIDEBRUSH  BRUSH  BLOWER  LIGHTS  CurrMOTOR  BATTERY    GEAR MotLB MotRF MotRB 
+//[i]     0        1      2       3         4         5          6         7        
+//    SIDEBRUSH  BRUSH  BLOWER  LIGHTS  CurrMOTOR  BATTERY    GEAR L/R  BLOKADA
 byte LCD_DATA[8] = {0,0,0,0,0,0,0,0}; // 12-bit -> 4096 -> 8bit 256 -> coef: 16 
 
 // PWM CH    0        1           2           3
@@ -41,7 +41,13 @@ uint16_t BLOWER{0}, BRUSH{0}, SIDEBRUSH{0}, LIGHTS{0};
 const uint16_t SBRUSH_MAXPWM = 2048; // 50% MAKS
 const uint16_t BRUSH_MAXPWM  = 1020; // 25% MAKS
 const uint16_t BLOWER_MAXPWM = 4020; // 98% MAKS
-
+int Rblock = 5;
+int Lblock = 6;
+int RevInvertPin = 7;
+bool revInvert = false, revInvert_p = false;
+bool RisBlck = false, RisBlck_p = false;
+bool LisBlck = false, LisBlck_p = false;
+byte bitLRblck = 0;
 byte selectedMotor = 0; // 0-all, 1-sidebrush, 2-brush, 3-blower
 //enum MOTOR_TYPE { blower=0, brush=1, sidebrush=2 };
 //MOTOR_TYPE cMotor = 0;
@@ -73,6 +79,9 @@ Serial.begin(115200);
   Serial.println("Start ENGINE");
   motors.motBegin(4,   5,   6,    7);
   pinMode(17, INPUT); // A3
+  pinMode(Rblock, INPUT_PULLUP);
+  pinMode(Lblock, INPUT_PULLUP);
+  pinMode(RevInvertPin, INPUT_PULLUP);
   Serial.println("SETUP END");
 }
 
@@ -108,6 +117,8 @@ void calcBat()
   LCD_DATA[5] = batVMapped;
 }
 
+uint16_t camSer=300;
+Kronos camSerDel;
 void loop() {
 
   if (radio.available()) 
@@ -138,6 +149,34 @@ void loop() {
       
     } // END RADIO AVAILABLE
 
+    // Sprawdzanie blokady prawej i lewej
+    digitalRead(Rblock)==LOW ? RisBlck=true : RisBlck=false;
+    digitalRead(Lblock)==LOW ? LisBlck=true : LisBlck=false;
+    digitalRead(RevInvertPin)==LOW ? revInvert=true : revInvert=false;
+    // Akcja po blokadzie jednorazowe
+    if (RisBlck_p != RisBlck)
+    {
+      if (RisBlck==true) { /*Serial.println("PRAWY BLOKADA");*/ bitLRblck|=0x1; } // bit LSB 0
+      else { /*Serial.println("PRAWY WOLNY");*/ bitLRblck&=0xFE; }
+      LCD_DATA[7] = bitLRblck;
+      RisBlck_p = RisBlck;
+    }
+    if (LisBlck_p != LisBlck)
+    {
+      if (LisBlck==true) { /*Serial.println("PRAWY BLOKADA");*/ bitLRblck|=0x2; } // bit LSB 1
+      else { /*Serial.println("PRAWY WOLNY");*/ bitLRblck&=0xFD;}
+      LCD_DATA[7] = bitLRblck;
+      LisBlck_p = LisBlck;
+    }
+    // Akcja: odwrucenie sterowania L/R 'do tylu'
+    if (revInvert_p != revInvert)
+    {
+      if (revInvert==true) { bitLRblck|=0x4; } // bit LSB 2
+      else { bitLRblck&=0xFB;}
+      LCD_DATA[7] = bitLRblck;
+      revInvert_p = revInvert;
+    }
+    
     //Zmiana L BTN --- wybor motora
     if (LbtnState_p != LbtnState)
     {
@@ -239,22 +278,20 @@ void loop() {
     */
 
     // Zmiana PRAWA galka VERTYKALNA - - teraz PRAWY POT
-    /*
-    if (RVert > 220 && RVdel.del(150))
+
+    // PWM down 210, up 400
+    if (RVert > 200 && camSerDel.del(30))
     {
-      if (POWER<3000) POWER+=40;
-      pwm.setPWM(0, 0, POWER);
-      pwm.setPWM(1, 0, POWER);
-      pwm.setPWM(2, 0, POWER);
+      pwm.setPWM(12, 0, camSer);
+      if (camSer<400) camSer+=5;
+      Serial.println("Cam ser: "+String(camSer));
     }
-    if (RVert < 35 && RVdel.del(150))
+    if (RVert < 50 && camSerDel.del(30))
     {
-      if (POWER>0) POWER-=40;
-      if (POWER < 0) POWER = 0;
-      pwm.setPWM(0, 0, POWER);
-      pwm.setPWM(1, 0, POWER);
-      pwm.setPWM(2, 0, POWER);
+      pwm.setPWM(12, 0, camSer);
+      if (camSer>210) camSer-=5;
+      Serial.println("Cam ser: "+String(camSer));
     }
-    */
+    
     
 } // loop END
