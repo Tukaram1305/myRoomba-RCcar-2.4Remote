@@ -237,8 +237,15 @@ void loop() {
      /* MIN 12.8    16.8 MAX
     ArdV    1.98    2.6   xCoef 6.46
     ArdAna  405.5   532.5 
-    byte    101,375 133,125 
-    BatV = 5/1024 * ArdAna * coef  
+    byte    101,375 133,125  / 25,84 /
+    BatV = 5/1024 * ArdAna * coef * 4 (int->byte)~~25,84 
+    =>
+             129.2*ArdAna             1024*V
+    V(bat) = ------------ ==>> ANA = --------
+                1024                   129,2
+
+     MIN 13,2v = 104,619
+     MAX 16,6v = 131,566
     */
     if (BATITER < 15)
     {
@@ -252,9 +259,9 @@ void loop() {
       BATMED = static_cast<byte>(BSS);
       BATSUM=0;
       
-      if (BATMED < 103)     bPc = 0;
-      else if(BATMED > 131) bPc = 100;
-      else bPc = map(BATMED, 103, 131, 1, 99);
+      if (BATMED <= 104)     bPc = 0;          // ABS MIN 13,2v ~ 104
+      else if(BATMED >= 131) bPc = 100;        // ABS MAX 16,6v ~ 131
+      else bPc = map(BATMED, 103, 132, 1, 99);
   
       int original = (BATMED)*4;
       float BATV = 5./1023*original * 6.46; // 6.46 -> coef z dzielnika nap.
